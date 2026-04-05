@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scores Cardiológicos</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f5f4f0;--bg2:#ffffff;--bg3:#eeede8;
+  --txt:#1a1a18;--txt2:#6b6a64;--txt3:#9e9d97;
+  --bd:rgba(0,0,0,0.1);--bd2:rgba(0,0,0,0.18);
+  --blue-bg:#e6f1fb;--blue-bd:#b5d4f4;--blue-txt:#185fa5;
+  --green-bg:#eaf3de;--green-bd:#c0dd97;--green-txt:#3b6d11;
+  --amber-bg:#faeeda;--amber-bd:#fac775;--amber-txt:#854f0b;
+  --red-bg:#fcebeb;--red-bd:#f7c1c1;--red-txt:#a32d2d;
+  --teal-bg:#e1f5ee;--teal-bd:#9fe1cb;--teal-txt:#0f6e56;
+  --r:10px;--rs:7px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1a;--bg2:#252523;--bg3:#2e2e2b;
+    --txt:#e8e6df;--txt2:#9e9d97;--txt3:#6b6a64;
+    --bd:rgba(255,255,255,0.1);--bd2:rgba(255,255,255,0.18);
+    --blue-bg:#042c53;--blue-bd:#0c447c;--blue-txt:#85b7eb;
+    --green-bg:#173404;--green-bd:#27500a;--green-txt:#97c459;
+    --amber-bg:#412402;--amber-bd:#633806;--amber-txt:#ef9f27;
+    --red-bg:#501313;--red-bd:#791f1f;--red-txt:#f09595;
+    --teal-bg:#04342c;--teal-bd:#085041;--teal-txt:#5dcaa5;
+  }
+}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:15px;min-height:100vh;}
+
+/* ── Header: SOLO título + tabs, siempre compacto ── */
+header{background:var(--bg2);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:30;}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0;}
+.hdr-top h1{font-size:15px;font-weight:600;}
+.pt-pill{font-size:12px;font-weight:500;color:var(--teal-txt);background:var(--teal-bg);border:1px solid var(--teal-bd);border-radius:99px;padding:5px 14px;cursor:pointer;white-space:nowrap;user-select:none;}
+.tabs{display:flex;overflow-x:auto;scrollbar-width:none;padding:0 4px;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{flex-shrink:0;padding:10px 14px;font-size:13px;font-weight:500;color:var(--txt2);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;}
+.tab.on{color:var(--blue-txt);border-bottom-color:var(--blue-txt);}
+.tab:hover:not(.on){color:var(--txt);}
+
+/* ── Overlay backdrop ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:40;backdrop-filter:blur(2px);}
+.overlay.open{display:block;}
+
+/* ── Patient drawer: fixed panel desde arriba, scrollable ── */
+.pt-drawer{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  background:var(--bg2);
+  border-bottom:1px solid var(--bd);
+  border-radius:0 0 var(--r) var(--r);
+  box-shadow:0 8px 32px rgba(0,0,0,0.18);
+  max-height:85vh;
+  overflow-y:auto;
+  transform:translateY(-110%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.pt-drawer.open{transform:translateY(0);}
+
+.drawer-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg2);z-index:2;}
+.drawer-title{font-size:14px;font-weight:600;color:var(--txt);}
+.drawer-close{font-size:14px;color:var(--txt2);cursor:pointer;padding:4px 8px;border-radius:6px;background:var(--bg3);border:none;font-family:inherit;}
+.drawer-close:hover{background:var(--bd2);}
+.drawer-body{padding:14px 16px 20px;}
+
+/* ── Main content ── */
+main{max-width:560px;margin:0 auto;padding:16px 16px 70px;}
+.panel{display:none;}
+.panel.on{display:block;}
+
+/* ── Shared bar (inside each score) ── */
+.sbar{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;padding:9px 12px;background:var(--teal-bg);border:1px solid var(--teal-bd);border-radius:var(--rs);cursor:pointer;}
+.sbar:hover{opacity:.85;}
+.sbar-lbl{font-size:11px;font-weight:600;color:var(--teal-txt);width:100%;margin-bottom:3px;}
+.sbar.empty{background:var(--bg3);border-color:var(--bd);}
+.sbar.empty .sbar-lbl{color:var(--txt3);}
+.schip{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg2);color:var(--teal-txt);border:1px solid var(--teal-bd);}
+.sbar.empty .schip{color:var(--txt3);border-color:var(--bd);}
+
+/* ── Form elements ── */
+.f{margin-bottom:14px;}
+.f>label{display:block;font-size:11px;font-weight:600;color:var(--txt2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--bd2);border-radius:var(--rs);font-size:15px;font-family:inherit;color:var(--txt);background:var(--bg2);outline:none;-moz-appearance:textfield;}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=number]:focus{border-color:var(--blue-txt);box-shadow:0 0 0 3px rgba(24,95,165,.12);}
+.hint{font-size:11px;color:var(--txt3);margin-top:4px;line-height:1.45;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.intro{font-size:13px;color:var(--txt2);margin-bottom:14px;line-height:1.5;}
+
+.rg{display:flex;gap:6px;flex-wrap:wrap;}
+.rb{padding:7px 16px;border:1px solid var(--bd2);border-radius:99px;font-size:13px;font-weight:500;cursor:pointer;color:var(--txt2);user-select:none;transition:all .15s;background:var(--bg2);}
+.rb.on{background:var(--blue-bg);border-color:var(--blue-bd);color:var(--blue-txt);}
+
+.cks{border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;background:var(--bg2);}
+.ck{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--bd);user-select:none;transition:background .1s;}
+.ck:last-child{border-bottom:none;}
+.ck:hover:not(.auto){background:var(--bg3);}
+.ck.auto{background:var(--teal-bg);cursor:default;}
+.cb{width:19px;height:19px;border:1.5px solid var(--bd2);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .15s;}
+.ck.on .cb{background:var(--blue-bg);border-color:var(--blue-txt);}
+.ck.on .cb::after{content:'✓';font-size:12px;font-weight:700;color:var(--blue-txt);}
+.ck.auto.on .cb{background:var(--teal-bg);border-color:var(--teal-txt);}
+.ck.auto.on .cb::after{color:var(--teal-txt);}
+.ct{flex:1;}
+.ct-main{font-size:14px;color:var(--txt);line-height:1.35;}
+.ct-sub{font-size:12px;color:var(--txt2);margin-top:2px;line-height:1.35;}
+.ck.auto .ct-main,.ck.auto .ct-sub{color:var(--teal-txt);}
+.ck.auto .ct-sub{opacity:.8;}
+.atag{font-size:10px;font-weight:600;color:var(--teal-txt);opacity:.7;margin-top:2px;}
+.cp{font-size:13px;font-weight:600;color:var(--txt2);flex-shrink:0;min-width:26px;text-align:right;padding-top:1px;}
+.ck.auto .cp{color:var(--teal-txt);}
+
+.res{margin-top:16px;padding:14px 16px;border-radius:var(--r);border:1px solid var(--bd);background:var(--bg3);}
+.res.low{background:var(--green-bg);border-color:var(--green-bd);}
+.res.mod{background:var(--amber-bg);border-color:var(--amber-bd);}
+.res.high{background:var(--red-bg);border-color:var(--red-bd);}
+.res-num{font-size:30px;font-weight:600;line-height:1;color:var(--txt);}
+.res.low .res-num{color:var(--green-txt);}
+.res.mod .res-num{color:var(--amber-txt);}
+.res.high .res-num{color:var(--red-txt);}
+.res-lbl{font-size:14px;font-weight:600;margin-top:5px;color:var(--txt2);}
+.res.low .res-lbl{color:var(--green-txt);}
+.res.mod .res-lbl{color:var(--amber-txt);}
+.res.high .res-lbl{color:var(--red-txt);}
+.res-det{font-size:12px;margin-top:5px;color:var(--txt2);line-height:1.6;}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+.dual .res{margin-top:0;}
+.dtag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);margin-bottom:6px;}
+.disc{font-size:11px;color:var(--txt3);margin-top:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;line-height:1.55;border:1px solid var(--bd);}
+.disc strong{font-weight:600;color:var(--txt2);}
+
+.conv-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-top:6px;}
+.conv-sep{font-size:13px;color:var(--txt3);text-align:center;}
+.conv-lbl{font-size:11px;color:var(--txt3);text-align:center;margin-top:3px;}
+.desvincular{font-size:11px;color:var(--blue-txt);cursor:pointer;text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<!-- Header fijo y compacto: solo título + tabs -->
+<header>
+  <div class="hdr-top">
+    <h1>Scores Cardiológicos</h1>
+    <div class="pt-pill" id="ptPill" onclick="togglePt()">Paciente ▾</div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" onclick="sw(0)">SCORE2</button>
+    <button class="tab" onclick="sw(1)">H2FPEF</button>
+    <button class="tab" onclick="sw(2)">CHA₂DS₂</button>
+    <button class="tab" onclick="sw(3)">HAS-BLED</button>
+    <button class="tab" onclick="sw(4)">RCRI</button>
+  </div>
+</header>
+
+<!-- Backdrop oscuro al abrir el drawer -->
+<div class="overlay" id="overlay" onclick="closePt()"></div>
+
+<!-- Panel paciente como drawer flotante -->
+<div class="pt-drawer" id="ptDrawer">
+  <div class="drawer-header">
+    <span class="drawer-title">Datos del paciente</span>
+    <button class="drawer-close" onclick="closePt()">Cerrar ✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="g2">
+      <div class="f">
+        <label>Sexo</label>
+        <div class="rg">
+          <div class="rb on" id="ptM" onclick="setPt('sex','M')">Masculino</div>
+          <div class="rb" id="ptF" onclick="setPt('sex','F')">Femenino</div>
+        </div>
+      </div>
+      <div class="f">
+        <label>Edad (años)</label>
+        <input type="number" id="ptAge" placeholder="ej. 68" min="18" max="110" oninput="setPt('age',+this.value||null)">
+      </div>
+    </div>
+    <div class="f">
+      <label>Antecedentes y factores de riesgo</label>
+      <div class="cks">
+        <div class="ck" onclick="tgPt(this,'hta')"><div class="cb"></div><div class="ct"><div class="ct-main">Hipertensión arterial</div></div></div>
+        <div class="ck" onclick="tgPt(this,'dm')"><div class="cb"></div><div class="ct"><div class="ct-main">Diabetes mellitus</div></div></div>
+        <div class="ck" onclick="tgPt(this,'smoke')"><div class="cb"></div><div class="ct"><div class="ct-main">Tabaquismo activo</div></div></div>
+        <div class="ck" onclick="tgPt(this,'imc30')"><div class="cb"></div><div class="ct"><div class="ct-main">Obesidad (IMC &gt;30 kg/m²)</div></div></div>
+        <div class="ck" onclick="tgPt(this,'ic')"><div class="cb"></div><div class="ct"><div class="ct-main">Insuficiencia cardíaca</div></div></div>
+        <div class="ck" onclick="tgPt(this,'ci')"><div class="cb"></div><div class="ct"><div class="ct-main">Cardiopatía isquémica</div><div class="ct-sub">IAM, angina o revascularización previa</div></div></div>
+        <div class="ck" onclick="tgPt(this,'fa')"><div class="cb"></div><div class="ct"><div class="ct-main">Fibrilación auricular</div></div></div>
+        <div class="ck" onclick="tgPt(this,'acv')"><div class="cb"></div><div class="ct"><div class="ct-main">ACV / AIT previo</div></div></div>
+        <div class="ck" onclick="tgPt(this,'evasc')"><div class="cb"></div><div class="ct"><div class="ct-main">Enfermedad vascular periférica</div><div class="ct-sub">EAP o placa aórtica significativa</div></div></div>
+        <div class="ck" onclick="tgPt(this,'cr2')"><div class="cb"></div><div class="ct"><div class="ct-main">Creatinina &gt;2.0 mg/dL</div></div></div>
+        <div class="ck" onclick="tgPt(this,'insulina')"><div class="cb"></div><div class="ct"><div class="ct-main">Insulinoterapia</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+
+<!-- ══ SCORE2 ══ -->
+<div class="panel on" id="p0">
+  <p class="intro">Riesgo CV a 10 años (fatal y no fatal). ESC 2021 · Región moderado-alto (aproximación para Argentina).</p>
+  <div class="sbar empty" id="s2bar" onclick="togglePt()"><div class="sbar-lbl">Tocá para cargar los datos del paciente →</div></div>
+  <div class="g2">
+    <div class="f"><label>TA sistólica (mmHg)</label><input type="number" id="s2sbp" placeholder="ej. 130" min="90" max="220" oninput="updS2()"></div>
+    <div class="f">
+      <label>Colesterol no-HDL</label>
+      <div class="conv-row">
+        <div><input type="number" id="s2mg" placeholder="mg/dL" step="1" oninput="cMg(+this.value)"><div class="conv-lbl">mg/dL</div></div>
+        <div class="conv-sep">↔</div>
+        <div><input type="number" id="s2mm" placeholder="mmol/L" step="0.01" oninput="cMm(+this.value)"><div class="conv-lbl">mmol/L</div></div>
+      </div>
+      <p class="hint">Colesterol total − HDL. Ingresá en cualquier unidad.</p>
+    </div>
+  </div>
+  <div class="res" id="s2res">
+    <div class="res-num" id="s2n">—</div>
+    <div class="res-lbl" id="s2l">Ingresá edad, TA y colesterol no-HDL</div>
+    <div class="res-det" id="s2d"></div>
+  </div>
+  <p class="disc"><strong>ESC 2021 · Región moderado-alto.</strong> Válido 40–69 años (≥70: SCORE2-OP). Para decisiones críticas: heartscore.org.</p>
+</div>
+
+<!-- ══ H2FPEF ══ -->
+<div class="panel" id="p1">
+  <p class="intro">Probabilidad diagnóstica de ICFEp. Variables con (*) requieren ecocardiograma.</p>
+  <div class="sbar empty" id="h2bar" onclick="togglePt()"><div class="sbar-lbl">Tocá para cargar los datos del paciente →</div></div>
+  <div class="cks">
+    <div class="ck auto" id="h2imc" data-pts="2"><div class="cb"></div><div class="ct"><div class="ct-main">IMC &gt;30 kg/m²</div><div class="ct-sub">Obesidad</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+2</div></div>
+    <div class="ck auto" id="h2hta" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">≥2 antihipertensivos en uso</div><div class="ct-sub">Auto-completado desde HTA — <span class="desvincular" onclick="event.stopPropagation();h2htaToggle()">desvincular</span></div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="h2fa" data-pts="3"><div class="cb"></div><div class="ct"><div class="ct-main">Fibrilación auricular</div><div class="ct-sub">Paroxística o persistente</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+3</div></div>
+    <div class="ck auto" id="h2age" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Edad &gt;60 años</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'h2')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Hipertensión pulmonar (*)</div><div class="ct-sub">PAP &gt;35 mmHg por eco-Doppler</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'h2')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Presión de llenado elevada (*)</div><div class="ct-sub">E/e' &gt;9 en ecocardiograma</div></div><div class="cp">+1</div></div>
+  </div>
+  <div class="res" id="h2res"><div class="res-num" id="h2n">0 / 9</div><div class="res-lbl" id="h2l">Baja probabilidad de ICFEp</div><div class="res-det" id="h2d">Probabilidad ~5–14%. Buscar diagnóstico alternativo.</div></div>
+  <p class="disc"><strong>Reddy et al., JACC 2018.</strong> 0–1: baja (~5–14%); 2–5: intermedia (~30–55%); 6–9: alta (~95%). Score intermedio → eco de estrés diastólico.</p>
+</div>
+
+<!-- ══ CHA2DS2 ══ -->
+<div class="panel" id="p2">
+  <p class="intro">Riesgo tromboembólico en FA no valvular. Se calculan simultáneamente CHA₂DS₂-VA (ESC 2024) y CHA₂DS₂-VASc.</p>
+  <div class="sbar empty" id="chabar" onclick="togglePt()"><div class="sbar-lbl">Tocá para cargar los datos del paciente →</div></div>
+  <div class="cks">
+    <div class="ck auto" id="cha-ic"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Insuficiencia cardíaca</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="cha-hta" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Hipertensión arterial</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="cha-a2"  data-pts="2"><div class="cb"></div><div class="ct"><div class="ct-main">Edad ≥75 años</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+2</div></div>
+    <div class="ck auto" id="cha-dm"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Diabetes mellitus</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="cha-acv" data-pts="2"><div class="cb"></div><div class="ct"><div class="ct-main">ACV / AIT / tromboembolismo previo</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+2</div></div>
+    <div class="ck auto" id="cha-ev"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Enfermedad vascular</div><div class="ct-sub">IAM previo, EAP, placa aórtica</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="cha-a1"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Edad 65–74 años</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+  </div>
+  <div class="dual">
+    <div class="res" id="chava"><div class="dtag">CHA₂DS₂-VA · ESC 2024</div><div class="res-num" id="chava-n">0</div><div class="res-lbl" id="chava-l">Sin indicación de ACO</div><div class="res-det" id="chava-d">Riesgo muy bajo.</div></div>
+    <div class="res" id="chavasc"><div class="dtag">CHA₂DS₂-VASc · clásico</div><div class="res-num" id="chavasc-n">0</div><div class="res-lbl" id="chavasc-l">Sin indicación de ACO</div><div class="res-det" id="chavasc-d">Riesgo muy bajo.</div></div>
+  </div>
+  <p class="disc"><strong>ESC FA 2024:</strong> CHA₂DS₂-VA elimina el sexo como factor. <strong>ACC/AHA 2023</strong> mantiene VASc. Score ≥2 → ACO recomendada.</p>
+</div>
+
+<!-- ══ HAS-BLED ══ -->
+<div class="panel" id="p3">
+  <p class="intro">Riesgo de sangrado mayor en FA anticoagulada. Score ≥3 = riesgo alto.</p>
+  <div class="sbar empty" id="hbbar" onclick="togglePt()"><div class="sbar-lbl">Tocá para cargar los datos del paciente →</div></div>
+  <div class="cks">
+    <div class="ck auto" id="hb-hta" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">HTA no controlada</div><div class="ct-sub">TA sistólica &gt;160 mmHg — auto desde HTA en datos del paciente</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="hb-cr"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Disfunción renal</div><div class="ct-sub">Creatinina &gt;2.0 mg/dL, diálisis o trasplante</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'hb')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Disfunción hepática</div><div class="ct-sub">Cirrosis, bilirrubina &gt;2× o transaminasas &gt;3×</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="hb-acv" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">ACV previo</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'hb')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Sangrado previo o predisposición</div><div class="ct-sub">Historia de sangrado mayor, anemia, coagulopatía</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'hb')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">INR lábil (solo en pacientes con AVK)</div><div class="ct-sub">TTR &lt;60% con warfarina o acenocumarol</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="hb-age" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Edad ≥65 años</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'hb')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Antiagregantes o AINEs concomitantes</div></div><div class="cp">+1</div></div>
+    <div class="ck" onclick="tgSpec(this,'hb')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Consumo excesivo de alcohol</div><div class="ct-sub">≥8 bebidas por semana</div></div><div class="cp">+1</div></div>
+  </div>
+  <div class="res" id="hbres"><div class="res-num" id="hbn">0 / 9</div><div class="res-lbl" id="hbl">Riesgo bajo–moderado</div><div class="res-det" id="hbd">Score &lt;3: no contraindica formalmente la anticoagulación.</div></div>
+  <p class="disc"><strong>Pisters et al., Chest 2010.</strong> Score ≥3: &gt;4%/año sangrado mayor. Identificar factores modificables — no suspender ACO sólo por score elevado.</p>
+</div>
+
+<!-- ══ RCRI ══ -->
+<div class="panel" id="p4">
+  <p class="intro">Índice de Riesgo Cardíaco Revisado (Lee 1999). MACE en cirugía no cardíaca electiva. Vigente ACC/AHA 2024.</p>
+  <div class="sbar empty" id="rcbar" onclick="togglePt()"><div class="sbar-lbl">Tocá para cargar los datos del paciente →</div></div>
+  <div class="cks">
+    <div class="ck" onclick="tgSpec(this,'rc')" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Cirugía de alto riesgo</div><div class="ct-sub">Intraperitoneal, intratorácica o vascular suprainguinal</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="rc-ci"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Cardiopatía isquémica</div><div class="ct-sub">IAM, angina o revascularización previa</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="rc-ic"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Insuficiencia cardíaca</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="rc-acv" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Enfermedad cerebrovascular</div><div class="ct-sub">ACV o AIT previo</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="rc-ins" data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Insulinoterapia preoperatoria</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+    <div class="ck auto" id="rc-cr"  data-pts="1"><div class="cb"></div><div class="ct"><div class="ct-main">Creatinina &gt;2.0 mg/dL</div><div class="atag">↑ datos del paciente</div></div><div class="cp">+1</div></div>
+  </div>
+  <div class="res" id="rcres"><div class="res-num" id="rcn">0 / 6</div><div class="res-lbl" id="rcl">Riesgo muy bajo</div><div class="res-det" id="rcd">MACE estimado: ~0.4%. Sin necesidad de evaluación cardíaca adicional.</div></div>
+  <p class="disc"><strong>Lee et al., Circulation 1999. ACC/AHA 2024.</strong> RCRI ≥2: considerar evaluación funcional. RCRI ≥3: evaluación cardiológica completa antes de cirugía electiva.</p>
+</div>
+
+</main>
+
+<script>
+const pt={sex:'M',age:null,hta:false,dm:false,smoke:false,imc30:false,ic:false,ci:false,fa:false,acv:false,evasc:false,cr2:false,insulina:false};
+let ptOpen=false, h2htaLinked=true, s2nonhdl=null;
+
+function togglePt(){ptOpen?closePt():openPt();}
+function openPt(){
+  ptOpen=true;
+  document.getElementById('ptDrawer').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('ptPill').textContent='Paciente ▴';
+}
+function closePt(){
+  ptOpen=false;
+  document.getElementById('ptDrawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('ptPill').textContent='Paciente ▾';
+}
+
+function setPt(k,v){
+  pt[k]=v;
+  if(k==='sex'){document.getElementById('ptM').classList.toggle('on',v==='M');document.getElementById('ptF').classList.toggle('on',v==='F');}
+  syncAll();
+}
+function tgPt(el,key){el.classList.toggle('on');pt[key]=el.classList.contains('on');syncAll();}
+
+function sw(i){
+  document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('on',i===j));
+  document.querySelectorAll('.panel').forEach((p,j)=>p.classList.toggle('on',i===j));
+}
+
+function auto(id,val){const el=document.getElementById(id);if(el)el.classList.toggle('on',!!val);}
+
+function bar(id,chips){
+  const b=document.getElementById(id);
+  if(!chips.length){b.className='sbar empty';b.innerHTML='<div class="sbar-lbl">Tocá para cargar los datos del paciente →</div>';return;}
+  b.className='sbar';
+  b.innerHTML='<div class="sbar-lbl">Desde datos del paciente — tocá para editar</div>'+chips.map(c=>`<span class="schip">${c}</span>`).join('');
+}
+
+function sum(panelId){let t=0;document.querySelectorAll('#'+panelId+' .ck.on').forEach(el=>{t+=+(el.dataset.pts||0);});return t;}
+
+// SCORE2
+function cMg(v){if(!v)return;const mm=+(v/38.67).toFixed(2);document.getElementById('s2mm').value=mm;s2nonhdl=mm;updS2();}
+function cMm(v){if(!v)return;const mg=+(v*38.67).toFixed(0);document.getElementById('s2mg').value=mg;s2nonhdl=v;updS2();}
+function updS2(){
+  const{sex,smoke}=pt,age=pt.age,sbp=+document.getElementById('s2sbp').value||null;
+  const chips=[];
+  if(age)chips.push(age+' años');
+  chips.push(sex==='M'?'Masculino':'Femenino');
+  if(smoke)chips.push('Fumador');
+  bar('s2bar',chips);
+  const res=document.getElementById('s2res');
+  if(!age||age<40||age>69||!sbp||!s2nonhdl){
+    res.className='res';
+    document.getElementById('s2n').textContent='—';
+    document.getElementById('s2l').textContent=!age?'Ingresá la edad':(age<40||age>69)?'Rango: 40–69 años (≥70: SCORE2-OP)':!sbp?'Ingresá la TA sistólica':'Ingresá el colesterol no-HDL';
+    document.getElementById('s2d').textContent='';return;
+  }
+  const a=(age-60)/5,sv=(sbp-120)/20,c=s2nonhdl-3.5,sm=smoke?1:0;
+  let lp,s0,alpha,beta;
+  if(sex==='M'){lp=0.3742*a+0.6012*sm+0.2777*sv+0.6457*c-0.0281*a*sm-0.0226*a*sv-0.0611*a*c;s0=0.9605;alpha=-0.5699;beta=0.7476;}
+  else{lp=0.4648*a+0.7744*sm+0.3131*sv+0.8096*c-0.0500*a*sm-0.0280*a*sv-0.0731*a*c;s0=0.9776;alpha=-0.7380;beta=0.7019;}
+  const raw=Math.max(1e-6,Math.min(1-1e-6,1-Math.pow(s0,Math.exp(lp))));
+  const rec=1-Math.exp(-Math.exp(alpha+beta*Math.log(-Math.log(1-raw))));
+  const pct=Math.round(Math.max(0,Math.min(100,rec*100)));
+  let low,mod;
+  if(age<=49){low=5;mod=10;}else if(age<=59){low=7.5;mod=15;}else{low=10;mod=20;}
+  const lvl=pct<low?'low':pct<mod?'mod':'high';
+  res.className='res '+lvl;
+  document.getElementById('s2n').textContent=pct+'%';
+  document.getElementById('s2l').textContent={low:'Riesgo bajo',mod:'Riesgo moderado',high:'Riesgo alto'}[lvl]+' a 10 años';
+  const grp=age<=49?'40–49':age<=59?'50–59':'60–69';
+  document.getElementById('s2d').textContent=`Umbrales ${grp} años: bajo <${low}%, moderado ${low}–${mod}%, alto ≥${mod}%`;
+}
+
+// H2FPEF
+function h2htaToggle(){
+  h2htaLinked=!h2htaLinked;
+  const el=document.getElementById('h2hta'),link=el.querySelector('.desvincular');
+  if(h2htaLinked){el.classList.add('auto');link.textContent='desvincular';el.onclick=null;syncH2();}
+  else{el.classList.remove('auto','on');link.textContent='vincular de nuevo';el.onclick=function(){tgSpec(this,'h2');};}
+}
+function syncH2(){
+  const age=pt.age;
+  auto('h2imc',pt.imc30);
+  if(h2htaLinked)auto('h2hta',pt.hta);
+  auto('h2fa',pt.fa);
+  auto('h2age',age&&age>60);
+  const chips=[];
+  if(pt.imc30)chips.push('IMC >30');
+  if(pt.hta&&h2htaLinked)chips.push('HTA → ≥2 antihipert.');
+  if(pt.fa)chips.push('FA');
+  if(age&&age>60)chips.push('Edad >60');
+  bar('h2bar',chips);updH2();
+}
+function updH2(){
+  const sc=sum('p1');
+  let lvl,lbl,det;
+  if(sc<=1){lvl='low';lbl='Baja probabilidad de ICFEp';det='Probabilidad ~5–14%. Buscar diagnóstico alternativo.';}
+  else if(sc<=5){lvl='mod';lbl='Probabilidad intermedia de ICFEp';det='Probabilidad ~30–55%. Considerar eco de estrés diastólico.';}
+  else{lvl='high';lbl='Alta probabilidad de ICFEp';det='Probabilidad ~95%. Diagnóstico de ICFEp muy probable.';}
+  document.getElementById('h2res').className='res '+lvl;
+  document.getElementById('h2n').textContent=sc+' / 9';
+  document.getElementById('h2l').textContent=lbl;
+  document.getElementById('h2d').textContent=det;
+}
+
+// CHA2DS2
+function syncCha(){
+  const age=pt.age,a75=age&&age>=75,a65=age&&age>=65&&age<75;
+  auto('cha-ic',pt.ic);auto('cha-hta',pt.hta);auto('cha-a2',a75);
+  auto('cha-dm',pt.dm);auto('cha-acv',pt.acv);auto('cha-ev',pt.evasc);auto('cha-a1',a65);
+  const chips=[];
+  if(pt.ic)chips.push('IC');if(pt.hta)chips.push('HTA');
+  if(a75)chips.push('Edad ≥75');else if(a65)chips.push('Edad 65–74');
+  if(pt.dm)chips.push('DM');if(pt.acv)chips.push('ACV/AIT');if(pt.evasc)chips.push('Enf. vasc.');
+  chips.push(pt.sex==='F'?'Femenino':'Masculino');
+  bar('chabar',chips);updCha();
+}
+function updCha(){
+  let va=0;
+  ['cha-ic','cha-hta','cha-a2','cha-dm','cha-acv','cha-ev','cha-a1'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el&&el.classList.contains('on'))va+=+(el.dataset.pts||0);
+  });
+  const vasc=va+(pt.sex==='F'?1:0);
+  function interp(sc){
+    if(sc<=0)return{lvl:'low',lbl:'Sin indicación de ACO',det:'Riesgo tromboembólico muy bajo.'};
+    if(sc===1)return{lvl:'mod',lbl:'Considerar ACO',det:'Evaluar riesgo/beneficio individualmente.'};
+    return{lvl:'high',lbl:'ACO recomendada',det:'Riesgo tromboembólico elevado (≥2%/año).'};
+  }
+  const ri=interp(va),rv=interp(vasc);
+  document.getElementById('chava').className='res '+ri.lvl;
+  document.getElementById('chava-n').textContent=va;
+  document.getElementById('chava-l').textContent=ri.lbl;
+  document.getElementById('chava-d').textContent=ri.det;
+  document.getElementById('chavasc').className='res '+rv.lvl;
+  document.getElementById('chavasc-n').textContent=vasc;
+  document.getElementById('chavasc-l').textContent=rv.lbl;
+  document.getElementById('chavasc-d').textContent=rv.det;
+}
+
+// HAS-BLED
+function syncHb(){
+  const age=pt.age;
+  auto('hb-hta',pt.hta);auto('hb-cr',pt.cr2);auto('hb-acv',pt.acv);auto('hb-age',age&&age>=65);
+  const chips=[];
+  if(pt.hta)chips.push('HTA');if(pt.cr2)chips.push('Cr >2');
+  if(pt.acv)chips.push('ACV previo');if(age&&age>=65)chips.push('Edad ≥65');
+  bar('hbbar',chips);updHb();
+}
+function updHb(){
+  const sc=sum('p3');
+  let lvl,lbl,det;
+  if(sc<3){lvl='low';lbl='Riesgo bajo–moderado';det='Score <3: no contraindica formalmente la anticoagulación.';}
+  else{lvl='high';lbl='Riesgo alto de sangrado';det='Score ≥3: >4%/año sangrado mayor. Identificar y corregir factores modificables.';}
+  document.getElementById('hbres').className='res '+lvl;
+  document.getElementById('hbn').textContent=sc+' / 9';
+  document.getElementById('hbl').textContent=lbl;
+  document.getElementById('hbd').textContent=det;
+}
+
+// RCRI
+function syncRc(){
+  auto('rc-ci',pt.ci);auto('rc-ic',pt.ic);auto('rc-acv',pt.acv);auto('rc-ins',pt.insulina);auto('rc-cr',pt.cr2);
+  const chips=[];
+  if(pt.ci)chips.push('Cardiopatía isq.');if(pt.ic)chips.push('IC');
+  if(pt.acv)chips.push('ACV/AIT');if(pt.insulina)chips.push('Insulina');if(pt.cr2)chips.push('Cr >2');
+  bar('rcbar',chips);updRc();
+}
+function updRc(){
+  const sc=sum('p4');
+  let lvl,lbl,det;
+  if(sc===0){lvl='low';lbl='Riesgo muy bajo';det='MACE estimado: ~0.4%. Sin necesidad de evaluación adicional.';}
+  else if(sc===1){lvl='low';lbl='Riesgo bajo';det='MACE estimado: ~1.0%. Proceder con cirugía. Optimizar tratamiento médico.';}
+  else if(sc===2){lvl='mod';lbl='Riesgo intermedio';det='MACE estimado: ~3.6%. Considerar evaluación funcional o prueba de estrés.';}
+  else{lvl='high';lbl='Riesgo elevado';det='MACE estimado: ≥7%. Evaluación cardiológica completa antes de cirugía electiva.';}
+  document.getElementById('rcres').className='res '+lvl;
+  document.getElementById('rcn').textContent=sc+' / 6';
+  document.getElementById('rcl').textContent=lbl;
+  document.getElementById('rcd').textContent=det;
+}
+
+function tgSpec(el,grp){
+  el.classList.toggle('on');
+  if(grp==='h2')updH2();
+  if(grp==='hb')updHb();
+  if(grp==='rc')updRc();
+}
+
+function syncAll(){syncH2();syncCha();syncHb();syncRc();updS2();}
+syncAll();
+</script>
+</body>
+</html>
